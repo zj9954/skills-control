@@ -38,7 +38,7 @@ async function runAutoUpdate(reason) {
   if (!settings.autoUpdate) return;
   try {
     notify('auto-update:status', { state: 'checking', reason });
-    const report = await github.updateAll(settings.token);
+    const report = await github.updateAll();
     notify('auto-update:status', { state: 'done', reason, ...report });
   } catch (e) {
     notify('auto-update:status', { state: 'error', reason, error: e.message });
@@ -71,11 +71,11 @@ handle('skills:delete', (agentId, dirName) => skills.deleteSkill(agentId, dirNam
 handle('skills:detail', (agentId, dirName) => skills.getDetail(agentId, dirName));
 handle('skills:copyTo', (agentId, dirName, targets) => skills.copySkillTo(agentId, dirName, targets));
 
-handle('github:resolve', (input) => github.resolveRepo(input, skills.getSettings().token));
-handle('github:install', (payload) => github.installSkills(payload, skills.getSettings().token));
-handle('github:checkUpdates', () => github.checkUpdates(skills.getSettings().token));
-handle('github:update', (key) => github.updateSkill(key, skills.getSettings().token));
-handle('github:updateAll', () => github.updateAll(skills.getSettings().token));
+handle('github:resolve', (input) => github.resolveRepo(input));
+handle('github:install', (payload) => github.installSkills(payload));
+handle('github:checkUpdates', () => github.checkUpdates());
+handle('github:update', (key) => github.updateSkill(key));
+handle('github:updateAll', () => github.updateAll());
 handle('github:search', (query) => github.searchRepos(query, skills.getSettings().token));
 
 handle('settings:get', () => skills.getSettings());
@@ -89,6 +89,18 @@ handle('shell:openExternal', (url) => {
   return shell.openExternal(url);
 });
 handle('shell:openPath', (p) => shell.openPath(p));
+
+// 单实例锁：重复启动时聚焦已有窗口，避免两个实例争抢缓存与清单文件
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    if (win) {
+      if (win.isMinimized()) win.restore();
+      win.focus();
+    }
+  });
+}
 
 app.whenReady().then(() => {
   createWindow();

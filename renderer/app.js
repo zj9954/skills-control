@@ -169,7 +169,8 @@ async function onSkillAction(act, skill, rowEl) {
       state.skills = r.skills;
       delete state.updates[k];
       renderAll();
-      toast(`已更新：${r.installed.join('、') || skill.title}`);
+      if (r.installed.length) toast(`已更新：${r.installed.join('、')}`);
+      else if (r.unchanged.length) toast(`${skill.title} 已是最新（仓库有新提交，但该技能文件没有变化）`);
       if (r.errors.length) toast(r.errors.join('\n'), 'warn', 6000);
     } else if (act === 'sync') {
       openSyncModal(skill);
@@ -239,7 +240,9 @@ $('#btn-update-all').addEventListener('click', async () => {
     const r = await call('updateAll');
     state.updates = {};
     await refreshAll();
-    toast(r.updated.length ? `已更新 ${r.updated.length} 项：${r.updated.join('、')}` : '没有需要更新的技能');
+    if (r.updated.length) toast(`已更新 ${r.updated.length} 项：${r.updated.join('、')}`);
+    else if (r.unchanged.length) toast('全部已是最新（仓库有新提交，但技能文件没有变化）');
+    else toast('没有需要更新的技能');
     if (r.errors.length) toast(r.errors.join('\n'), 'warn', 8000);
   } catch (e) {
     toast(e.message, 'error', 6000);
@@ -331,7 +334,9 @@ $('#btn-install-next').addEventListener('click', async () => {
       state.skills = r.skills;
       renderAll();
       closeInstallModal();
-      toast(r.installed.length ? `已安装：${r.installed.join('、')}` : '没有安装任何技能', r.installed.length ? 'ok' : 'warn');
+      if (r.installed.length) toast(`已安装：${r.installed.join('、')}`);
+      else if (r.unchanged && r.unchanged.length) toast('所选技能已安装且是最新版本');
+      else toast('没有安装任何技能', 'warn');
       if (r.errors.length) toast(r.errors.join('\n'), 'warn', 8000);
     }
   } catch (e) {

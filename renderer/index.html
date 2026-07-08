@@ -63,23 +63,23 @@
       <section class="view" id="view-settings" hidden>
         <div class="settings">
           <div class="setting-group">
-            <h3>GitHub 访问</h3>
-            <label class="field">
-              <span>Personal Access Token（可选，用于提高 API 速率限制与访问私有仓库）</span>
-              <input type="password" id="set-token" placeholder="ghp_…" />
-            </label>
-          </div>
-          <div class="setting-group">
             <h3>自动更新</h3>
             <label class="check-row">
               <input type="checkbox" id="set-auto-update" />
-              <span>应用运行期间自动检查并更新从 GitHub 安装的技能</span>
+              <span>应用运行期间自动检查并更新从 GitHub 安装的技能（默认开启）</span>
             </label>
             <label class="field inline">
               <span>检查间隔（小时）</span>
               <input type="number" id="set-auto-hours" min="1" max="168" value="6" />
             </label>
-            <p class="muted">启动 10 秒后会先检查一次，之后按间隔重复。应用关闭时不检查。</p>
+            <p class="muted">启动 10 秒后会先检查一次，之后按间隔重复。应用关闭时不检查。安装与更新检查都不走 GitHub API，没有次数限制。</p>
+          </div>
+          <div class="setting-group">
+            <h3>GitHub 访问</h3>
+            <label class="field">
+              <span>Personal Access Token（可选，仅用于「发现」页搜索提高限额，安装/更新不需要）</span>
+              <input type="password" id="set-token" placeholder="ghp_…" />
+            </label>
           </div>
           <div class="setting-group">
             <h3>Agent 技能目录</h3>
