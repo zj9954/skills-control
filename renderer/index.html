@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'" />
+  <title>Skills Control</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-lamp"></div>
+        <div>
+          <div class="brand-name">SKILLS CONTROL</div>
+          <div class="brand-sub">Agent 技能控制台</div>
+        </div>
+      </div>
+      <nav class="nav">
+        <button class="nav-item active" data-view="installed">
+          <span class="nav-icon">▤</span>已安装<span class="nav-count" id="count-installed"></span>
+        </button>
+        <button class="nav-item" data-view="discover">
+          <span class="nav-icon">◎</span>发现技能
+        </button>
+        <button class="nav-item" data-view="settings">
+          <span class="nav-icon">⚙</span>设置
+        </button>
+      </nav>
+      <div class="sidebar-foot">
+        <div class="auto-update-pill" id="auto-update-pill">自动更新：关闭</div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <!-- 已安装 -->
+      <section class="view" id="view-installed">
+        <header class="toolbar">
+          <input class="search-input" id="local-search" type="text" placeholder="搜索本地技能…" />
+          <button class="btn" id="btn-check-updates">检查更新</button>
+          <button class="btn" id="btn-update-all" hidden>全部更新</button>
+          <button class="btn primary" id="btn-open-install">＋ 安装技能</button>
+        </header>
+        <div class="chips" id="agent-chips"></div>
+        <div class="skill-list" id="skill-list"></div>
+      </section>
+
+      <!-- 发现 -->
+      <section class="view" id="view-discover" hidden>
+        <header class="toolbar">
+          <input class="search-input" id="gh-search" type="text" placeholder="搜索 GitHub 上的技能仓库，回车搜索…" />
+          <button class="btn primary" id="btn-gh-search">搜索</button>
+        </header>
+        <div class="discover-hint">
+          推荐：<button class="link-btn" data-repo="anthropics/skills">anthropics/skills（官方技能库）</button>
+        </div>
+        <div class="repo-list" id="repo-list">
+          <div class="empty">输入关键词搜索 GitHub 上的技能仓库，或直接点上方的官方技能库。</div>
+        </div>
+      </section>
+
+      <!-- 设置 -->
+      <section class="view" id="view-settings" hidden>
+        <div class="settings">
+          <div class="setting-group">
+            <h3>GitHub 访问</h3>
+            <label class="field">
+              <span>Personal Access Token（可选，用于提高 API 速率限制与访问私有仓库）</span>
+              <input type="password" id="set-token" placeholder="ghp_…" />
+            </label>
+          </div>
+          <div class="setting-group">
+            <h3>自动更新</h3>
+            <label class="check-row">
+              <input type="checkbox" id="set-auto-update" />
+              <span>应用运行期间自动检查并更新从 GitHub 安装的技能</span>
+            </label>
+            <label class="field inline">
+              <span>检查间隔（小时）</span>
+              <input type="number" id="set-auto-hours" min="1" max="168" value="6" />
+            </label>
+            <p class="muted">启动 10 秒后会先检查一次，之后按间隔重复。应用关闭时不检查。</p>
+          </div>
+          <div class="setting-group">
+            <h3>Agent 技能目录</h3>
+            <p class="muted">检测到的主流 Agent（亮灯表示本机已安装该工具）：</p>
+            <div id="agent-status-list"></div>
+            <h4>自定义目录</h4>
+            <div id="custom-agent-list"></div>
+            <div class="custom-agent-add">
+              <input type="text" id="custom-name" placeholder="名称，如 我的 Agent" />
+              <input type="text" id="custom-dir" placeholder="技能目录完整路径，如 D:\ai\skills" />
+              <button class="btn" id="btn-add-custom">添加</button>
+            </div>
+          </div>
+          <div class="setting-actions">
+            <button class="btn primary" id="btn-save-settings">保存设置</button>
+            <span class="save-hint" id="save-hint"></span>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- 安装弹窗 -->
+  <div class="modal-mask" id="modal-install" hidden>
+    <div class="modal">
+      <h3 id="install-title">安装技能</h3>
+      <div class="modal-body" id="install-body">
+        <label class="field">
+          <span>GitHub 仓库地址（支持 user/repo 或完整链接，可带子目录）</span>
+          <input type="text" id="install-input" placeholder="例如 anthropics/skills 或 https://github.com/user/repo/tree/main/my-skill" />
+        </label>
+        <div id="install-step2" hidden>
+          <h4>选择要安装的技能 <span class="muted" id="install-found-note"></span></h4>
+          <div class="pick-list" id="install-skill-picks"></div>
+          <h4>接入到哪些 Agent</h4>
+          <div class="pick-list horizontal" id="install-target-picks"></div>
+        </div>
+        <div class="modal-status" id="install-status"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn" id="btn-install-cancel">取消</button>
+        <button class="btn primary" id="btn-install-next">解析仓库</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 同步到其他 Agent 弹窗 -->
+  <div class="modal-mask" id="modal-sync" hidden>
+    <div class="modal">
+      <h3 id="sync-title">同步到其他 Agent</h3>
+      <div class="modal-body">
+        <p class="muted">把该技能复制到以下 Agent 的技能目录，立即可被调用：</p>
+        <div class="pick-list" id="sync-target-picks"></div>
+        <div class="modal-status" id="sync-status"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn" id="btn-sync-cancel">取消</button>
+        <button class="btn primary" id="btn-sync-confirm">同步</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 详情弹窗 -->
+  <div class="modal-mask" id="modal-detail" hidden>
+    <div class="modal wide">
+      <h3 id="detail-title">技能详情</h3>
+      <div class="modal-body">
+        <div class="detail-meta" id="detail-meta"></div>
+        <pre class="detail-content" id="detail-content"></pre>
+      </div>
+      <div class="modal-actions">
+        <button class="btn" id="btn-detail-open">打开目录</button>
+        <button class="btn" id="btn-detail-close">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toasts" id="toasts"></div>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,60 @@
+{
+  "name": "skills-control",
+  "version": "1.0.0",
+  "description": "管理 AI Agent 技能的桌面控制台 —— 从 GitHub 安装、自动更新、启用/禁用、跨 Agent 同步",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win"
+  },
+  "author": "zj9954",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zj9954/skills-control.git"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.zj9954.skillscontrol",
+    "productName": "Skills Control",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "lib/**/*",
+      "renderer/**/*",
+      "build/icon.ico"
+    ],
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "artifactName": "SkillsControl-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "SkillsControl-Portable-${version}.${ext}"
+    }
+  }
+}
