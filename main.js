@@ -12,7 +12,7 @@ function createWindow() {
     height: 780,
     minWidth: 880,
     minHeight: 560,
-    backgroundColor: '#131820',
+    backgroundColor: skills.getSettings().theme === 'light' ? '#f2f4f8' : '#131820',
     autoHideMenuBar: true,
     title: 'Skills Control',
     icon: path.join(__dirname, 'build', 'icon.ico'),

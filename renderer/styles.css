@@ -5,6 +5,7 @@
   --panel: #191f28;
   --panel-2: #202836;
   --panel-3: #26303f;
+  --panel-hover: #1c2330;
   --line: #2a3442;
   --line-soft: #232c38;
   --text: #e7ecf3;
@@ -15,10 +16,43 @@
   --ok: #46b876;
   --warn: #e8a33d;
   --danger: #e05b5b;
+  --lamp-off: #454f5d;
+  --sidebar-g2: #11151c;
+  --brand-grad2: #9fb4d8;
+  --mask: rgba(6, 9, 13, 0.72);
   --mono: "Cascadia Code", Consolas, "Courier New", monospace;
   --sans: "Segoe UI", "Microsoft YaHei UI", "PingFang SC", sans-serif;
   --radius: 8px;
   --shadow-row: 0 1px 3px rgba(0, 0, 0, 0.25);
+  --shadow-modal: 0 24px 70px rgba(0, 0, 0, 0.55);
+  --shadow-toast: 0 10px 30px rgba(0, 0, 0, 0.45);
+}
+
+/* 浅色主题 */
+:root[data-theme="light"] {
+  --bg: #f2f4f8;
+  --bg-deep: #e8ecf2;
+  --panel: #ffffff;
+  --panel-2: #f4f6fa;
+  --panel-3: #e9edf4;
+  --panel-hover: #f7f9fd;
+  --line: #d3dae4;
+  --line-soft: #e2e7ef;
+  --text: #1d2735;
+  --dim: #5a6778;
+  --faint: #8b96a6;
+  --action: #3b6fd4;
+  --action-soft: rgba(59, 111, 212, 0.12);
+  --ok: #279a58;
+  --warn: #b97c1e;
+  --danger: #cf4444;
+  --lamp-off: #c2cad6;
+  --sidebar-g2: #eef1f6;
+  --brand-grad2: #3b5a86;
+  --mask: rgba(35, 45, 62, 0.38);
+  --shadow-row: 0 1px 3px rgba(25, 35, 55, 0.08);
+  --shadow-modal: 0 24px 70px rgba(30, 40, 60, 0.25);
+  --shadow-toast: 0 10px 30px rgba(30, 40, 60, 0.18);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -40,7 +74,7 @@ body {
 .sidebar {
   width: 208px;
   flex-shrink: 0;
-  background: linear-gradient(180deg, var(--bg-deep) 0%, #11151c 100%);
+  background: linear-gradient(180deg, var(--bg-deep) 0%, var(--sidebar-g2) 100%);
   border-right: 1px solid var(--line-soft);
   display: flex;
   flex-direction: column;
@@ -58,7 +92,7 @@ body {
 @keyframes breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 .brand-name {
   font-family: var(--mono); font-size: 13px; letter-spacing: 2.5px; font-weight: 700;
-  background: linear-gradient(90deg, var(--text), #9fb4d8);
+  background: linear-gradient(90deg, var(--text), var(--brand-grad2));
   -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
 }
 .brand-sub { font-size: 11px; color: var(--faint); margin-top: 3px; letter-spacing: 0.5px; }
@@ -83,7 +117,14 @@ body {
 .nav-icon { width: 16px; text-align: center; font-size: 14px; }
 .nav-count { margin-left: auto; font-family: var(--mono); font-size: 11.5px; color: var(--faint); }
 
-.sidebar-foot { margin-top: auto; padding: 8px 4px 0; }
+.sidebar-foot { margin-top: auto; padding: 8px 4px 0; display: flex; flex-direction: column; gap: 8px; }
+.theme-toggle {
+  background: none; border: 1px solid var(--line-soft); border-radius: 20px;
+  padding: 6px 10px; color: var(--dim); font-size: 11.5px; font-family: var(--sans);
+  cursor: pointer; text-align: center;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.theme-toggle:hover { color: var(--text); border-color: var(--faint); background: var(--panel-2); }
 .auto-update-pill {
   font-size: 11px; color: var(--faint); font-family: var(--mono);
   border: 1px solid var(--line-soft); border-radius: 20px;
@@ -162,7 +203,7 @@ body {
 }
 .skill-row:nth-child(-n+12) { animation-delay: calc(var(--i, 0) * 0.025s); }
 @keyframes row-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
-.skill-row:hover { border-color: var(--line); background: #1c2330; }
+.skill-row:hover { border-color: var(--line); background: var(--panel-hover); }
 .skill-row.disabled { opacity: 0.55; }
 
 /* 状态指示灯：界面的签名元素 */
@@ -174,10 +215,10 @@ body {
 }
 .lamp.ok { background: var(--ok); box-shadow: 0 0 8px rgba(70, 184, 118, 0.9), 0 0 2px var(--ok); }
 .lamp.warn { background: var(--warn); box-shadow: 0 0 8px rgba(232, 163, 61, 0.9), 0 0 2px var(--warn); }
-.lamp.off { background: #454f5d; box-shadow: none; }
+.lamp.off { background: var(--lamp-off); box-shadow: none; }
 
 .skill-info { flex: 1; min-width: 0; }
-.skill-name-line { display: flex; align-items: baseline; gap: 8px; }
+.skill-name-line { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .skill-name { font-weight: 600; font-size: 14px; letter-spacing: 0.2px; }
 .skill-agent {
   font-size: 10.5px; color: var(--dim);
@@ -185,6 +226,7 @@ body {
   background: var(--bg-deep);
   font-family: var(--mono);
 }
+.skill-agent.off { opacity: 0.45; text-decoration: line-through; }
 .skill-badge { font-size: 10.5px; border-radius: 4px; padding: 1px 7px; }
 .skill-badge.update {
   color: var(--warn);
@@ -252,7 +294,7 @@ body {
   box-shadow: var(--shadow-row);
   transition: border-color 0.15s, background 0.15s;
 }
-.repo-row:hover { border-color: var(--line); background: #1c2330; }
+.repo-row:hover { border-color: var(--line); background: var(--panel-hover); }
 .repo-info { flex: 1; min-width: 0; }
 .repo-name { font-family: var(--mono); font-size: 13.5px; color: var(--text); font-weight: 600; }
 .repo-desc { color: var(--dim); font-size: 12.5px; margin-top: 4px; }
@@ -304,7 +346,7 @@ body {
 
 /* ============ 弹窗 ============ */
 .modal-mask {
-  position: fixed; inset: 0; background: rgba(6, 9, 13, 0.72);
+  position: fixed; inset: 0; background: var(--mask);
   backdrop-filter: blur(3px);
   display: flex; align-items: center; justify-content: center; z-index: 100;
   animation: fade-in 0.15s ease;
@@ -315,7 +357,7 @@ body {
   background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
   width: 560px; max-width: calc(100vw - 60px); max-height: calc(100vh - 80px);
   display: flex; flex-direction: column;
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
+  box-shadow: var(--shadow-modal);
   animation: modal-in 0.18s ease;
 }
 @keyframes modal-in { from { opacity: 0; transform: translateY(8px) scale(0.99); } to { opacity: 1; transform: none; } }
@@ -358,7 +400,7 @@ body {
 .toast {
   background: var(--panel-2); border: 1px solid var(--line); border-left: 3px solid var(--action);
   border-radius: 7px; padding: 11px 15px; font-size: 13px; max-width: 380px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  box-shadow: var(--shadow-toast);
   animation: slide-in 0.22s cubic-bezier(0.2, 0.8, 0.3, 1);
   white-space: pre-wrap;
 }

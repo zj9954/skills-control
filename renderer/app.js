@@ -49,8 +49,27 @@ async function refreshAll() {
   state.skills = skills;
   state.agents = agents;
   state.settings = settings;
+  applyTheme(settings.theme);
   renderAll();
 }
+
+/* ============ 主题 ============ */
+
+function applyTheme(theme) {
+  const light = theme === 'light';
+  document.documentElement.dataset.theme = light ? 'light' : 'dark';
+  $('#btn-theme').textContent = light ? '🌙 深色模式' : '☀ 浅色模式';
+}
+
+$('#btn-theme').addEventListener('click', async () => {
+  const next = state.settings?.theme === 'light' ? 'dark' : 'light';
+  applyTheme(next); // 先切界面，保存失败也不影响本次显示
+  try {
+    state.settings = await call('setSettings', { theme: next });
+  } catch (e) {
+    toast('主题偏好保存失败：' + e.message, 'warn');
+  }
+});
 
 function renderAll() {
   renderSidebar();
@@ -62,7 +81,7 @@ function renderAll() {
 /* ============ 侧栏 ============ */
 
 function renderSidebar() {
-  $('#count-installed').textContent = state.skills.length || '';
+  $('#count-installed').textContent = new Set(state.skills.map((s) => s.dirName)).size || '';
   const pill = $('#auto-update-pill');
   const on = state.settings && state.settings.autoUpdate;
   pill.textContent = on ? `自动更新：每 ${state.settings.autoUpdateHours} 小时` : '自动更新：关闭';
@@ -83,14 +102,16 @@ function renderChips() {
   const counts = {};
   for (const s of state.skills) counts[s.agentId] = (counts[s.agentId] || 0) + 1;
   const agentsWithSkills = state.agents.filter((a) => a.detected || counts[a.id]);
-  let html = `<button class="chip ${state.filterAgent === 'all' ? 'active' : ''}" data-agent="all">全部<span class="n">${state.skills.length}</span></button>`;
+  const uniqueCount = new Set(state.skills.map((s) => s.dirName)).size;
+  let html = `<button class="chip ${state.filterAgent === 'all' ? 'active' : ''}" data-agent="all">全部<span class="n">${uniqueCount}</span></button>`;
   for (const a of agentsWithSkills) {
     html += `<button class="chip ${state.filterAgent === a.id ? 'active' : ''}" data-agent="${escapeHtml(a.id)}">${escapeHtml(a.name)}<span class="n">${counts[a.id] || 0}</span></button>`;
   }
   $('#agent-chips').innerHTML = html;
 }
 
-function renderSkillList() {
+// 当前筛选/搜索条件下的技能实例列表（每个 Agent 一条）
+function filteredSkills() {
   const q = state.localQuery.trim().toLowerCase();
   let list = state.skills;
   if (state.filterAgent !== 'all') list = list.filter((s) => s.agentId === state.filterAgent);
@@ -102,41 +123,65 @@ function renderSkillList() {
         s.description.toLowerCase().includes(q)
     );
   }
+  return list;
+}
+
+// 同一技能（按目录名）在多个 Agent 中的实例合并成一组，界面上只显示一行
+function groupSkills(list) {
+  const map = new Map();
+  for (const s of list) {
+    if (!map.has(s.dirName)) map.set(s.dirName, []);
+    map.get(s.dirName).push(s);
+  }
+  return [...map.values()];
+}
+
+function renderSkillList() {
+  const list = filteredSkills();
 
   const hasAnyUpdate = state.skills.some((s) => state.updates[keyOf(s)]?.hasUpdate);
   $('#btn-update-all').hidden = !hasAnyUpdate;
 
-  if (list.length === 0) {
+  const groups = groupSkills(list);
+
+  if (groups.length === 0) {
     $('#skill-list').innerHTML =
       `<div class="empty">${state.skills.length === 0 ? '还没有扫描到任何技能。<br>点右上角「＋ 安装技能」，粘贴一个 GitHub 仓库地址开始。' : '没有匹配的技能。'}</div>`;
     return;
   }
 
-  $('#skill-list').innerHTML = list
-    .map((s, i) => {
-      const k = keyOf(s);
-      const upd = state.updates[k];
-      const lamp = !s.enabled ? 'off' : upd?.hasUpdate ? 'warn' : s.source ? 'ok' : 'off';
-      const lampTitle = !s.enabled ? '已禁用' : upd?.hasUpdate ? '有可用更新' : s.source ? '已是最新（来自 GitHub）' : '本地技能（无来源记录）';
+  $('#skill-list').innerHTML = groups
+    .map((g, i) => {
+      const first = g[0];
+      const anyEnabled = g.some((s) => s.enabled);
+      const anyUpdate = g.some((s) => state.updates[keyOf(s)]?.hasUpdate);
+      const anySource = g.some((s) => s.source);
+      const lamp = !anyEnabled ? 'off' : anyUpdate ? 'warn' : anySource ? 'ok' : 'off';
+      const lampTitle = !anyEnabled ? '已禁用' : anyUpdate ? '有可用更新' : anySource ? '已是最新（来自 GitHub）' : '本地技能（无来源记录）';
+      const agentTags = g
+        .map((s) => `<span class="skill-agent ${s.enabled ? '' : 'off'}" title="${escapeHtml(s.agentName)}：${s.enabled ? '已启用' : '已禁用'}">${escapeHtml(s.agentName)}</span>`)
+        .join('');
+      const desc = g.find((s) => s.description)?.description || '';
+      const src = g.find((s) => s.source)?.source;
       return `
-      <div class="skill-row ${s.enabled ? '' : 'disabled'}" data-key="${escapeHtml(k)}" style="--i:${i}">
+      <div class="skill-row ${anyEnabled ? '' : 'disabled'}" data-dir="${escapeHtml(first.dirName)}" style="--i:${i}">
         <span class="lamp ${lamp}" title="${lampTitle}"></span>
         <div class="skill-info">
           <div class="skill-name-line">
-            <span class="skill-name">${escapeHtml(s.title)}</span>
-            <span class="skill-agent">${escapeHtml(s.agentName)}</span>
-            ${upd?.hasUpdate ? '<span class="skill-badge update">可更新</span>' : ''}
+            <span class="skill-name">${escapeHtml(first.title)}</span>
+            ${agentTags}
+            ${anyUpdate ? '<span class="skill-badge update">可更新</span>' : ''}
           </div>
-          <div class="skill-desc" title="${escapeHtml(s.description)}">${escapeHtml(s.description) || '<span style="color:var(--faint)">（无描述）</span>'}</div>
-          ${s.source ? `<div class="skill-source">${escapeHtml(s.source.repo)}${s.source.subpath ? ' / ' + escapeHtml(s.source.subpath) : ''} @ ${escapeHtml(s.source.commit.slice(0, 7))}</div>` : ''}
+          <div class="skill-desc" title="${escapeHtml(desc)}">${escapeHtml(desc) || '<span style="color:var(--faint)">（无描述）</span>'}</div>
+          ${src ? `<div class="skill-source">${escapeHtml(src.repo)}${src.subpath ? ' / ' + escapeHtml(src.subpath) : ''} @ ${escapeHtml(src.commit.slice(0, 7))}</div>` : ''}
         </div>
         <div class="skill-actions">
-          ${upd?.hasUpdate ? `<button class="btn small primary" data-act="update">更新</button>` : ''}
+          ${anyUpdate ? `<button class="btn small primary" data-act="update">更新</button>` : ''}
           <button class="icon-btn" data-act="sync" title="同步到其他 Agent">⇄</button>
           <button class="icon-btn" data-act="detail" title="查看详情">ⓘ</button>
           <button class="icon-btn danger" data-act="delete" title="删除">✕</button>
-          <label class="switch" title="${s.enabled ? '点击禁用' : '点击启用'}">
-            <input type="checkbox" data-act="toggle" ${s.enabled ? 'checked' : ''} />
+          <label class="switch" title="${anyEnabled ? '点击禁用' : '点击启用'}${g.length > 1 ? `（${g.length} 个 Agent）` : ''}">
+            <input type="checkbox" data-act="toggle" ${anyEnabled ? 'checked' : ''} />
             <span class="track"></span>
           </label>
         </div>
@@ -145,37 +190,55 @@ function renderSkillList() {
     .join('');
 }
 
-function findSkill(key) {
-  return state.skills.find((s) => keyOf(s) === key);
+function findGroup(dirName) {
+  return filteredSkills().filter((s) => s.dirName === dirName);
 }
 
-async function onSkillAction(act, skill, rowEl) {
-  const k = keyOf(skill);
+// 行内操作作用于整组：同一技能在所有 Agent 中的实例一起启用/禁用/更新/删除
+async function onGroupAction(act, group, rowEl) {
+  const first = group[0];
+  const agentNames = group.map((s) => s.agentName).join('、');
   try {
     if (act === 'toggle') {
-      state.skills = await call('toggleSkill', skill.agentId, skill.dirName, !skill.enabled);
+      const enable = !group.some((s) => s.enabled);
+      let skills = null;
+      for (const s of group) {
+        if (s.enabled !== enable) skills = await call('toggleSkill', s.agentId, s.dirName, enable);
+      }
+      if (skills) state.skills = skills;
       renderAll();
-      toast(`${skill.title} 已${skill.enabled ? '禁用' : '启用'}`);
+      toast(`${first.title} 已${enable ? '启用' : '禁用'}${group.length > 1 ? `（${agentNames}）` : ''}`);
     } else if (act === 'delete') {
-      if (!confirm(`确定删除技能「${skill.title}」（${skill.agentName}）吗？目录将被移除，无法恢复。`)) return;
-      state.skills = await call('deleteSkill', skill.agentId, skill.dirName);
-      delete state.updates[k];
+      if (!confirm(`确定删除技能「${first.title}」吗？将从 ${agentNames} 中移除，无法恢复。`)) return;
+      for (const s of group) {
+        state.skills = await call('deleteSkill', s.agentId, s.dirName);
+        delete state.updates[keyOf(s)];
+      }
       renderAll();
-      toast(`已删除 ${skill.title}`, 'warn');
+      toast(`已删除 ${first.title}`, 'warn');
     } else if (act === 'update') {
       const btn = rowEl.querySelector('[data-act="update"]');
       if (btn) { btn.disabled = true; btn.textContent = '更新中…'; }
-      const r = await call('updateSkill', k);
-      state.skills = r.skills;
-      delete state.updates[k];
+      const targets = group.filter((s) => state.updates[keyOf(s)]?.hasUpdate);
+      const installed = [];
+      const unchanged = [];
+      const errors = [];
+      for (const s of targets) {
+        const r = await call('updateSkill', keyOf(s));
+        state.skills = r.skills;
+        delete state.updates[keyOf(s)];
+        installed.push(...r.installed);
+        unchanged.push(...(r.unchanged || []));
+        errors.push(...r.errors);
+      }
       renderAll();
-      if (r.installed.length) toast(`已更新：${r.installed.join('、')}`);
-      else if (r.unchanged.length) toast(`${skill.title} 已是最新（仓库有新提交，但该技能文件没有变化）`);
-      if (r.errors.length) toast(r.errors.join('\n'), 'warn', 6000);
+      if (installed.length) toast(`已更新：${installed.join('、')}`);
+      else if (unchanged.length) toast(`${first.title} 已是最新（仓库有新提交，但该技能文件没有变化）`);
+      if (errors.length) toast(errors.join('\n'), 'warn', 6000);
     } else if (act === 'sync') {
-      openSyncModal(skill);
+      openSyncModal(first);
     } else if (act === 'detail') {
-      await openDetailModal(skill);
+      await openDetailModal(group);
     }
   } catch (e) {
     toast(e.message, 'error', 6000);
@@ -187,11 +250,11 @@ $('#skill-list').addEventListener('click', (ev) => {
   const actEl = ev.target.closest('[data-act]');
   if (!actEl) return;
   const row = ev.target.closest('.skill-row');
-  const skill = findSkill(row.dataset.key);
-  if (!skill) return;
+  const group = findGroup(row.dataset.dir);
+  if (group.length === 0) return;
   const act = actEl.dataset.act;
   if (act === 'toggle') ev.preventDefault(); // 状态由数据驱动，不让复选框自己变
-  onSkillAction(act, skill, row);
+  onGroupAction(act, group, row);
 });
 
 $('#agent-chips').addEventListener('click', (ev) => {
@@ -403,10 +466,11 @@ $('#btn-sync-cancel').addEventListener('click', () => { $('#modal-sync').hidden 
 
 let detailPath = '';
 
-async function openDetailModal(skill) {
+async function openDetailModal(group) {
+  const skill = group[0];
   const d = await call('skillDetail', skill.agentId, skill.dirName);
   detailPath = d.path;
-  $('#detail-title').textContent = `${skill.title}（${skill.agentName}）`;
+  $('#detail-title').textContent = `${skill.title}（${group.map((s) => s.agentName).join('、')}）`;
   const src = skill.source
     ? `来源：${skill.source.repo}${skill.source.subpath ? ' / ' + skill.source.subpath : ''} @ ${skill.source.commit.slice(0, 7)}<br>安装：${skill.source.installedAt.slice(0, 10)}　更新：${skill.source.updatedAt.slice(0, 10)}<br>`
     : '来源：本地（无 GitHub 来源记录）<br>';

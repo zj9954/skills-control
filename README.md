@@ -10,11 +10,12 @@
 
 - **📦 从 GitHub 安装** — 粘贴 `user/repo` 或完整链接（支持子目录），自动扫描仓库里所有 `SKILL.md`，勾选安装；一次可同时装入多个 Agent
 - **🔄 自动更新** — 记录每个技能的来源仓库与提交，一键检查/全部更新；默认开启定时自动更新（应用运行期间按设定间隔静默检查并更新，只在技能文件真的变化时才重装）
-- **🗂 统一列表** — 自动检测本机已安装的主流 Agent（Claude Code / OpenAI Codex CLI / Gemini CLI / OpenCode / Cursor / GitHub Copilot CLI / Qwen Code），扫描它们各自目录里的全部技能，包括不是本工具安装的
+- **🗂 统一列表** — 自动检测本机已安装的主流 Agent（Claude Code / OpenAI Codex CLI / Gemini CLI / OpenCode / Cursor / GitHub Copilot CLI / Qwen Code），扫描它们各自目录里的全部技能，包括不是本工具安装的；同一技能装在多个 Agent 里只显示一行，行内徽标标出嵌入的 Agent，启用/更新/删除一次作用于全部副本
 - **⇄ 跨 Agent 同步** — 把任意已有技能一键复制到其他 Agent 的技能目录，立即可被调用
 - **🔘 启用 / 禁用** — 拨动开关即可临时禁用技能（移入 `skills-disabled` 备份目录，随时恢复），不必删除
 - **🔍 发现技能** — 站内搜索 GitHub 上的技能仓库，看星标和更新时间，直接安装
 - **📁 自定义目录** — 任何包含技能子目录的文件夹都可以作为自定义 Agent 接入
+- **🌗 深浅主题** — 侧栏一键切换深色 / 浅色主题，偏好自动保存
 
 ## 下载安装
 
